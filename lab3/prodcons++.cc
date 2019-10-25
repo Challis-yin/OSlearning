@@ -17,6 +17,8 @@
 
 #include "synch.h"
 #include "ring.h"
+#include <unistd.h> //库中包含write方法
+#include <fcntl.h> //库中包含creat方法
 
 #define BUFF_SIZE 3  // the size of the round buffer
 #define N_PROD    2  // the number of producers 
@@ -68,15 +70,18 @@ Producer(_int which)
     for (num = 0; num < N_MESSG ; num++) {
       // Put the code to prepare the message here.
       // ...
-
+	message->thread_id = which;
+	message->value = num;
       // Put the code for synchronization before  ring->Put(message) here.
       // ...
-
+	nempty->P();
+	mutex->P();
       ring->Put(message);
 
       // Put the code for synchronization after  ring->Put(message) here.
       // ...
-
+	mutex->V();
+	nfull->V();
     }
 }
 
@@ -112,12 +117,14 @@ Consumer(_int which)
 
       // Put the code for synchronization before ring->Get(message) here.
       // ...
-
+      nfull->P();
+      mutex->P();
       ring->Get(message);
 
       // Put the code for synchronization after ring->Get(message) here.
       // ...
-
+      mutex->V();
+      nempty->V();
 
       // form a string to record the message
       sprintf(str,"producer id --> %d; Message number --> %d;\n", 
@@ -144,15 +151,17 @@ void
 ProdCons()
 {
     int i;
-    DEBUG('t', "Entering ProdCons");
+    //DEBUG('t', "Entering ProdCons");
 
     // Put the code to construct all the semaphores here.
     // ....
-
+    mutex = new Semaphore("mutttt",1);
+    nfull = new Semaphore("nfull",0);
+    nempty = new Semaphore("empty",BUFF_SIZE);
     // Put the code to construct a ring buffer object with size 
     //BUFF_SIZE here.
     // ...    
-
+    ring = new Ring(BUFF_SIZE);
 
     // create and fork N_PROD of producer threads 
     for (i=0; i < N_PROD; i++) 
@@ -165,7 +174,8 @@ ProdCons()
       //     the name in prod_names[i] and 
       //     integer i as the argument of function "Producer"
       //  ...
-
+      producers[i] = new Thread(prod_names[i]);
+      producers[i]->Fork(Producer,i);
     };
 
     // create and fork N_CONS of consumer threads 
@@ -178,7 +188,8 @@ ProdCons()
       //     the name in cons_names[i] and 
       //     integer i as the argument of function "Consumer"
       //  ...
-
+      consumers[i] = new Thread(cons_names[i]);
+      consumers[i] -> Fork(Consumer,i);
     };
 }
 

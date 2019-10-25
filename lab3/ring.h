@@ -14,6 +14,11 @@
 // integer for the size of the buffer (the number of slots). 
 
 // class of the slot in the ring-buffer
+extern "C" {
+#include <stdio.h>
+extern int exit(int st);
+}
+
 class slot {
     public:
     slot(int id, int number);

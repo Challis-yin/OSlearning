@@ -6,10 +6,6 @@
 // All rights reserved.  See copyright.h for copyright notice and limitation 
 // of liability and disclaimer of warranty provisions.
 
-extern "C" {
-#include <stdio.h>
-extern int exit(int st);
-}
 
 #include "ring.h"
 
