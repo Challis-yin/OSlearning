@@ -21,6 +21,9 @@
 #include "disk.h"
 #include "stats.h"
 
+#include "directory.h"
+
+
 #define TransferSize 	10 	// make it small, just to be difficult
 
 //----------------------------------------------------------------------
@@ -69,6 +72,177 @@ Copy(char *from, char *to)
     fclose(fp);
 }
 
+
+//----------------------------------------------------------------------
+// Append
+// 	Append the contents of the UNIX file "from" to the Nachos file "to".
+//        if  "half" is non-zero, start at the middle of file "to" to
+//        appending the contents of "from"; Otherwise, do real appneding
+//        after the end of file "to".
+//
+//      If Nachos file "to" does not exist, create the nachos file 
+//         "to" with lengh 0, then append the contents of UNIX file 
+//         "from" to the end of it.
+//----------------------------------------------------------------------
+
+void
+Append(char *from, char *to, int half)
+{
+    FILE *fp;
+    OpenFile* openFile;
+    int amountRead, fileLength;
+    char *buffer;
+
+//  start position for appending
+    int start;
+
+// Open UNIX file
+    if ((fp = fopen(from, "r")) == NULL) {	 
+	printf("Copy: couldn't open input file %s\n", from);
+	return;
+    }
+
+// Figure out length of UNIX file
+    fseek(fp, 0, 2);		
+    fileLength = ftell(fp);
+    fseek(fp, 0, 0);
+
+    if (fileLength == 0) 
+    {
+	printf("Append: nothing to append from file %s\n", from);
+	return;
+    }
+	 
+    if ( (openFile = fileSystem->Open(to)) == NULL)
+    {
+	// file "to" does not exits, then create one
+	if (!fileSystem->Create(to, 0)) 
+	{
+	    printf("Append: couldn't create the file %s to append\n", to);
+	    fclose(fp);
+	    return;
+	}
+	openFile = fileSystem->Open(to);
+    }
+
+    ASSERT(openFile != NULL);
+    // append from position "start"
+    start = openFile->Length();
+    if (half) start = start / 2;
+    openFile->Seek(start);
+    
+// Append the data in TransferSize chunks
+    buffer = new char[TransferSize];
+    while ((amountRead = fread(buffer, sizeof(char), TransferSize, fp)) > 0) 
+    {
+        int result;
+//	printf("start value: %d,  amountRead %d, ", start, amountRead);
+//	result = openFile->WriteAt(buffer, amountRead, start);
+	result = openFile->Write(buffer, amountRead);
+//	printf("result of write: %d\n", result);
+	ASSERT(result == amountRead);
+//	start += amountRead;
+//	ASSERT(start == openFile->Length());
+    }
+    delete [] buffer;
+
+// Write the inode back to the disk, because we have changed it
+// openFile->WriteBack();
+//  printf("inodes have been written back\n");
+    
+// Close the UNIX and the Nachos files
+    delete openFile;
+    fclose(fp);
+}
+
+//----------------------------------------------------------------------
+// NAppend
+// 	NAppend is the same as Append except that the "from" file is a
+//         Nachos file instead of a UNIX file. It appends the contents
+//         of Nachos file "from" to the end of Nachos file "to".
+
+//      If Nachos file "to" does not exist, create the nachos file 
+//         "to" with lengh 0, then append the contents of UNIX file 
+//         "from" to the end of it.
+//----------------------------------------------------------------------
+
+void
+NAppend(char *from, char *to)
+{
+    OpenFile* openFileFrom;
+    OpenFile* openFileTo;
+    int amountRead, fileLength;
+    char *buffer;
+
+    //  start position for appending
+    int start;
+
+    if (!strncmp(from, to, FileNameMaxLen))
+    {
+	//  "from" should be the same as "to"
+	printf("NAppend: should be different files\n");
+	return;
+    }
+
+    if ( (openFileFrom = fileSystem->Open(from)) == NULL)
+    {
+	// file "from" does not exits, give up
+	printf("NAppend:  file %s does not exist\n", from);
+	return;
+    }
+
+    fileLength = openFileFrom->Length();
+    if (fileLength == 0) 
+    {
+	printf("NAppend: nothing to append from file %s\n", from);
+	return;
+    }
+	 
+    if ( (openFileTo = fileSystem->Open(to)) == NULL)
+    {
+	// file "to" does not exits, then create one
+	if (!fileSystem->Create(to, 0)) 
+	{
+	    printf("Append: couldn't create the file %s to append\n", to);
+	    delete openFileFrom;
+	    return;
+	}
+	openFileTo = fileSystem->Open(to);
+    }
+
+    ASSERT(openFileTo != NULL);
+    // append from position "start"
+    start = openFileTo->Length();
+    openFileTo->Seek(start);
+    
+// Append the data in TransferSize chunks
+    buffer = new char[TransferSize];
+    openFileFrom->Seek(0);
+    while ( (amountRead = openFileFrom->Read(buffer, TransferSize)) > 0) 
+    {
+        int result;
+//	printf("start value: %d,  amountRead %d, ", start, amountRead);
+//	result = openFile->WriteAt(buffer, amountRead, start);
+	result = openFileTo->Write(buffer, amountRead);
+//	printf("result of write: %d\n", result);
+	ASSERT(result == amountRead);
+//	start += amountRead;
+//	ASSERT(start == openFile->Length());
+    }
+    delete [] buffer;
+
+// Write the inode back to the disk, because we have changed it
+// openFileTo->WriteBack();
+// printf("inodes have been written back\n");
+    
+// Close both Nachos files
+    delete openFileTo;
+    delete openFileFrom;
+}
+
+
+
+
 //----------------------------------------------------------------------
 // Print
 // 	Print the contents of the Nachos file "name".
@@ -110,7 +284,7 @@ Print(char *name)
 
 #define FileName 	"TestFile"
 #define Contents 	"1234567890"
-#define ContentSize (int)strlen(Contents)
+#define ContentSize 	strlen(Contents)
 #define FileSize 	((int)(ContentSize * 5000))
 
 static void 
