@@ -42,7 +42,7 @@ class FileHeader {
 						//  on disk for the file data
     void Deallocate(BitMap *bitMap);  		// De-allocate this file's 
 						//  data blocks
-    bool Extend(int newSize);
+
     void FetchFrom(int sectorNumber); 	// Initialize file header from disk
     void WriteBack(int sectorNumber); 	// Write modifications to file header
 					//  back to disk
@@ -55,7 +55,8 @@ class FileHeader {
 					// in bytes
 
     void Print();			// Print the contents of the file.
-
+    
+    bool ExtendFileSize(int filesize);  // edit by ycl 19/12/4
   private:
     int numBytes;			// Number of bytes in the file
     int numSectors;			// Number of data sectors in the file

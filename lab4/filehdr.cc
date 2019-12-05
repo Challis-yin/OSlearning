@@ -55,7 +55,7 @@ FileHeader::Allocate(BitMap *freeMap, int fileSize)
 // FileHeader::Deallocate
 // 	De-allocate all the space allocated for data blocks for this file.
 //
-//	"freeMap" is the bit map of free disk sectors/ycl
+//	"freeMap" is the bit map of free disk sectors
 //----------------------------------------------------------------------
 
 void 
@@ -67,53 +67,10 @@ FileHeader::Deallocate(BitMap *freeMap)
     }
 }
 
-//------------------------------
-//
-//Tuo Zhan Wen Jian Da Xiao
-//by ycl
-//
-//------------------------------
-bool
-FileHeader::Extend(int newSize)
-{
-
-    if(newSize<numBytes)return FALSE;   //if not a extend operation
-
-    if(newSize==numBytes)return TRUE;   //if size not change
-
-    int newNumSectors  = divRoundUp(newSize, SectorSize);   //the number of sectors the new size need to be allocated.
-    if(newNumSectors == numSectors){
-        numBytes = newSize; 
-        return TRUE;    //if number of sectors new size need equals the 
-
-    }
-
-    int diffSector = newNumSectors - numSectors;    
-
-    OpenFile *bitmapfile = new OpenFile(0);
-    BitMap *freeMap;
-    freeMap = new BitMap(NumSectors);
-        freeMap->FetchFrom(bitmapfile);
-printf("debug in fhdr extend where new Sector=%d \n",freeMap->NumClear());
-    if(newNumSectors>NumDirect||freeMap->NumClear()< diffSector)return FALSE;   //if disk is full or file size is too big.
-
-    //allocate the new sectors and store them into file header
-    int i;
-    for(i = numSectors; i<newNumSectors; i++)
-    {
-        dataSectors[i] = freeMap->Find();
-    }
-    numBytes = newSize;
-    numSectors = newNumSectors;
-
-    return TRUE;
-}
-
-
 //----------------------------------------------------------------------
 // FileHeader::FetchFrom
 // 	Fetch contents of file header from disk. 
-//ycl
+//
 //	"sector" is the disk sector containing the file header
 //----------------------------------------------------------------------
 
@@ -191,3 +148,69 @@ FileHeader::Print()
     }
     delete [] data;
 }
+
+/*********
+
+edit by ycl
+extend file size
+*********/
+
+
+bool
+
+FileHeader::ExtendFileSize(int filesize)
+
+{
+
+    if(filesize < numBytes)return false;
+
+    if(filesize == numBytes)return true;
+
+   
+
+   
+
+    int newnumSectors  = divRoundUp(filesize, SectorSize);
+
+    if(newnumSectors == numSectors)
+
+    {
+
+        numBytes = filesize;
+
+        return true;
+
+    }
+
+    int ExtendSectors = newnumSectors - numSectors;
+    OpenFile *bitMapHeader = new OpenFile(0);
+    BitMap *bitMap = new BitMap(NumSectors);
+    bitMap->FetchFrom(bitMapHeader);
+    if (bitMap->NumClear() < ExtendSectors || newnumSectors > NumDirect)
+
+       return FALSE;            // not enough space
+
+ 
+
+    for (int i = 0; i < ExtendSectors; i++)
+
+       dataSectors[i+numSectors] = bitMap->Find();
+
+    bitMap->WriteBack(bitMapHeader);
+
+ 
+
+ 
+
+ 
+
+numBytes = filesize;
+
+numSectors = newnumSectors;
+
+return true;
+
+}
+
+
+

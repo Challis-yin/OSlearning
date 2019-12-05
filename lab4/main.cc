@@ -112,15 +112,16 @@ main(int argc, char **argv)
 					// for console input
 	}
 #endif // USER_PROGRAM
-#ifdef FILESYS
+
 	if (!strcmp(*argv, "-cp")) { 		// copy from UNIX to Nachos
 	    ASSERT(argc > 2);
 	    Copy(*(argv + 1), *(argv + 2));
 	    argCount = 3;
 	} 
 	else if (!strcmp(*argv, "-ap")) {  // append from UNIX to Nachos
-	    ASSERT(argc > 2);
+	    //ASSERT(argc > 2);
 	    Append(*(argv + 1), *(argv + 2), 0);
+	    printf("append function\n");
 	    argCount = 3;
 	} 
 	else if (!strcmp(*argv, "-hap")) {  
@@ -148,7 +149,7 @@ main(int argc, char **argv)
 	} else if (!strcmp(*argv, "-t")) {	// performance test
             PerformanceTest();
 	}
-#endif // FILESYS
+
 #ifdef NETWORK
         if (!strcmp(*argv, "-o")) {
 	    ASSERT(argc > 1);

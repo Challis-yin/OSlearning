@@ -63,8 +63,6 @@ class FileHeader;
 
 class OpenFile {
   public:
-    void WriteBack(); 
-    int headSector;
     OpenFile(int sector);		// Open a file whose header is located
 					// at "sector" on the disk
     ~OpenFile();			// Close the file
@@ -85,12 +83,13 @@ class OpenFile {
 
     int Length(); 			// Return the number of bytes in the
 					// file (this interface is simpler 
-					// than the UNIX idiom -- lseek to 
+    					// than the UNIX idiom -- lseek to 
 					// end of file, tell, lseek back 
-    
+    void WriteBack();			//edit by ycl
   private:
     FileHeader *hdr;			// Header for this file 
     int seekPosition;			// Current position within the file
+    int sector;				//edit by ycl
 };
 
 #endif // FILESYS

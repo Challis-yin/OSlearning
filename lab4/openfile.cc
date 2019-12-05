@@ -27,9 +27,9 @@
 OpenFile::OpenFile(int sector)
 { 
     hdr = new FileHeader;
-    headSector = sector;//ycl
     hdr->FetchFrom(sector);
     seekPosition = 0;
+    this->sector = sector;
 }
 
 //----------------------------------------------------------------------
@@ -144,22 +144,28 @@ OpenFile::ReadAt(char *into, int numBytes, int position)
 int
 OpenFile::WriteAt(char *from, int numBytes, int position)
 {
+//printf("\nWrite is runing!!!\n\n");
     int fileLength = hdr->FileLength();
     int i, firstSector, lastSector, numSectors;
     bool firstAligned, lastAligned;
     char *buf;
 
-    if ((numBytes <= 0) || (position >= fileLength))
-	return 0;				// check request
-    if ((position + numBytes) > fileLength)
-	hdr->Extend(position+numBytes);//numBytes = fileLength - position;
+    if (numBytes <= 0){
+	printf("\nWrite is runing!!!\nbut it return 0\n");
+	return 0;}			// check request
+    if ((position + numBytes) > fileLength){
+	hdr->ExtendFileSize(position+numBytes);	
+	//printf("extend secess");
+}
+//numBytes = fileLength - position;
+     if(fileLength==0) return 0;
     DEBUG('f', "Writing %d bytes at %d, from file of length %d.\n", 	
 			numBytes, position, fileLength);
 
     firstSector = divRoundDown(position, SectorSize);
     lastSector = divRoundDown(position + numBytes - 1, SectorSize);
     numSectors = 1 + lastSector - firstSector;
-
+//    printf("firstSector is %d,lastSector is %d\n",firstSector,lastSector);
     buf = new char[numSectors * SectorSize];
 
     firstAligned = (bool)(position == (firstSector * SectorSize));
@@ -181,6 +187,7 @@ OpenFile::WriteAt(char *from, int numBytes, int position)
 					&buf[(i - firstSector) * SectorSize]);
     delete [] buf;
     return numBytes;
+
 }
 
 //----------------------------------------------------------------------
@@ -193,8 +200,11 @@ OpenFile::Length()
 { 
     return hdr->FileLength(); 
 }
+
+
+//edit by ycl
 void
 OpenFile::WriteBack()
 {
-    hdr->WriteBack(headSector);
+    hdr->WriteBack(sector);
 }

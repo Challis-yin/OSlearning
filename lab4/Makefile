@@ -17,7 +17,7 @@ endef
 # just re-order and comment the includes below as appropriate.
 
 include ../threads/Makefile.local
-include Makefile.local
+include ../lab4/Makefile.local
 #include ../userprog/Makefile.local
 #include ../vm/Makefile.local
 #include ../filesys/Makefile.local
