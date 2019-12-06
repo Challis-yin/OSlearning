@@ -3,6 +3,6 @@ arch/unknown-i386-linux/depends/thread.d arch/unknown-i386-linux/objects/thread.
  ../threads/copyright.h ../threads/switch.h ../threads/synch.h \
  ../threads/list.h ../threads/system.h ../threads/scheduler.h \
  ../machine/interrupt.h ../threads/list.h ../machine/stats.h \
- ../machine/timer.h ../threads/utility.h ../filesys/filesys.h \
- ../filesys/openfile.h ../filesys/synchdisk.h ../machine/disk.h \
+ ../machine/timer.h ../threads/utility.h ../lab4/filesys.h \
+ ../lab4/openfile.h ../lab4/synchdisk.h ../machine/disk.h \
  ../threads/synch.h

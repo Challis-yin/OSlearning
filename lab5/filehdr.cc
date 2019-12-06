@@ -42,12 +42,29 @@ bool
 FileHeader::Allocate(BitMap *freeMap, int fileSize)
 { 
     numBytes = fileSize;
+	int lastindex = NumDirect-1;
     numSectors  = divRoundUp(fileSize, SectorSize);
     if (freeMap->NumClear() < numSectors)
-	return FALSE;		// not enough space
-
-    for (int i = 0; i < numSectors; i++)
-	dataSectors[i] = freeMap->Find();
+		return FALSE;		// not enough space
+	if(freeMap->NumClear()<numSectors)
+		return false;
+	else if(NumDirect+NumDirect2<=numSectors)
+		return false;
+	if(numSectors<lastindex)
+	{
+		for (int i = 0; i < numSectors; i++)
+		dataSectors[i] = freeMap->Find();
+		dataSectors[lastindex]=-1;
+	}
+    else{
+	for (int i = 0;i<lastindex;i++)
+        dataSectors[i] = freeMap->Find();
+	dataSectors[lastindex]=freeMap->Find();
+	int dataSector2[NumDirect2];
+	for(int i = 0;i<numSectors-NumDirect;i++)
+	    dataSector2[i] = freeMap->Find();
+	synchDisk->WriteSector(dataSectors[lastindex],(char*)dataSector2);
+    }
     return TRUE;
 }
 
@@ -61,10 +78,27 @@ FileHeader::Allocate(BitMap *freeMap, int fileSize)
 void 
 FileHeader::Deallocate(BitMap *freeMap)
 {
-    for (int i = 0; i < numSectors; i++) {
-	ASSERT(freeMap->Test((int) dataSectors[i]));  // ought to be marked!
-	freeMap->Clear((int) dataSectors[i]);
-    }
+    int lastIndex = NumDirect-1;
+	if(dataSectors[lastIndex]==-1){
+		for (int i = 0; i < numSectors; i++) {
+			ASSERT(freeMap->Test((int) dataSectors[i]));  // ought to be marked!
+			freeMap->Clear((int) dataSectors[i]);
+		}
+	}
+    else
+	{
+		int i = 0;
+		for(;i<lastIndex;i++)
+		{
+			ASSERT(freeMap->Test((int) dataSectors[i]));  // ought to be marked!
+			freeMap->Clear((int) dataSectors[i]);
+		}
+		int dataSector2[NumDirect2];
+		synchDisk->ReadSector(dataSectors[lastIndex],(char*)dataSector2);
+		freeMap->Clear((int)dataSectors[lastIndex]);
+		for(;i<numSectors;i++)
+			freeMap->Clear((int)dataSectors[i-lastIndex]);
+	}
 }
 
 //----------------------------------------------------------------------
@@ -106,7 +140,14 @@ FileHeader::WriteBack(int sector)
 int
 FileHeader::ByteToSector(int offset)
 {
-    return(dataSectors[offset / SectorSize]);
+        int lastIndex = NumDirect-1;
+	if(offset/SectorSize<lastIndex)
+		return(dataSectors[offset / SectorSize]);
+	else{
+	int dataSectors2[NumDirect2];
+	synchDisk->ReadSector(dataSectors[lastIndex],(char*)dataSectors2);
+	return (dataSectors2[offset/SectorSize-lastIndex]);
+	}
 }
 
 //----------------------------------------------------------------------
@@ -125,30 +166,121 @@ FileHeader::FileLength()
 // 	Print the contents of the file header, and the contents of all
 //	the data blocks pointed to by the file header.
 //----------------------------------------------------------------------
-void
-FileHeader::SetLength(int length)
-{
-this->numBytes=length;
-}
+
 void
 FileHeader::Print()
 {
     int i, j, k;
+	int lastIndex = NumDirect-1;
     char *data = new char[SectorSize];
-
-    printf("FileHeader contents.  File size: %d.  File blocks:\n", numBytes);
-    for (i = 0; i < numSectors; i++)
-	printf("%d ", dataSectors[i]);
-    printf("\nFile contents:\n");
-    for (i = k = 0; i < numSectors; i++) {
-	synchDisk->ReadSector(dataSectors[i], data);
-        for (j = 0; (j < SectorSize) && (k < numBytes); j++, k++) {
-	    if ('\040' <= data[j] && data[j] <= '\176')   // isprint(data[j])
-		printf("%c", data[j]);
-            else
-		printf("\\%x", (unsigned char)data[j]);
+	if(dataSectors[lastIndex]==-1)
+	{
+		printf("FileHeader contents.  File size: %d.  File blocks:\n", numBytes);
+		for (i = 0; i < numSectors; i++)
+		printf("%d ", dataSectors[i]);
+		printf("\nFile contents:\n");
+		for (i = k = 0; i < numSectors; i++) {
+		synchDisk->ReadSector(dataSectors[i], data);
+			for (j = 0; (j < SectorSize) && (k < numBytes); j++, k++) {
+			if ('\040' <= data[j] && data[j] <= '\176')   // isprint(data[j])
+			printf("%c", data[j]);
+				else
+			printf("\\%x", (unsigned char)data[j]);
+		}
+			printf("\n"); 
+		}
 	}
-        printf("\n"); 
-    }
+    else
+	{
+		int dataSectors2[NumDirect2];
+		synchDisk->ReadSector(dataSectors[lastIndex],(char*)dataSectors2);
+		printf("FileHeaderdddddd contents.  File size: %d.  File blocks:\n", numBytes);
+		for (i = 0; i < lastIndex; i++)
+			printf("%d ", dataSectors[i]);
+		for(;i<numSectors;i++)
+			printf("%d ", dataSectors2[i-lastIndex]);
+		printf("\nFile contents:\n");
+		for (i = k = 0; i < lastIndex; i++) {
+		synchDisk->ReadSector(dataSectors[i], data);
+			for (j = 0; (j < SectorSize) && (k < numBytes); j++, k++) {
+			if ('\040' <= data[j] && data[j] <= '\176')   // isprint(data[j])
+			printf("%c", data[j]);
+				else
+			printf("\\%x", (unsigned char)data[j]);
+		}
+			printf("\n"); 
+		}
+		for (; i < numSectors; i++) {
+		synchDisk->ReadSector(dataSectors2[i], data);
+			for (j = 0; (j < SectorSize) && (k < numBytes); j++, k++) {
+			if ('\040' <= data[j] && data[j] <= '\176')   // isprint(data[j])
+			printf("%c", data[j]);
+				else
+			printf("\\%x", (unsigned char)data[j]);
+		}
+			printf("\n"); 
+		}
+	}
     delete [] data;
 }
+
+/*********
+
+edit by ycl
+extend file size
+*********/
+
+
+bool
+
+FileHeader::ExtendFileSize(BitMap *freeMap,int filesize)
+
+{
+
+    int restFileSize = SectorSize * numSectors - numBytes;
+if(restFileSize>=filesize)
+{
+numBytes += filesize;
+return true;
+}
+else
+{
+int moreFileSize = filesize - restFileSize;
+	if(freeMap->NumClear()<divRoundUp(moreFileSize,SectorSize))
+		return false;
+	else if(NumDirect+NumDirect2<=numSectors+divRoundUp(moreFileSize,SectorSize))
+		return false;
+	int i = numSectors;
+	numBytes += filesize;
+	numSectors += divRoundUp(moreFileSize, SectorSize);
+	int lastIndex = NumDirect-1;
+	if(dataSectors[lastIndex]==-1)
+	{
+		if(numSectors < lastIndex)
+			for(;i<numSectors;i++)
+				dataSectors[i] = freeMap->Find();
+		else
+		{
+			for(;i<lastIndex;i++)
+				dataSectors[i] = freeMap->Find();
+			dataSectors[lastIndex] = freeMap->Find();
+			int dataSectors2[NumDirect2];
+			for(;i<numSectors;i++)
+				dataSectors2[i-lastIndex] = freeMap->Find();
+			synchDisk->WriteSector(dataSectors[lastIndex],(char*)dataSectors2);
+		}
+	}
+	else
+	{
+		int dataSectors2[NumDirect2];
+		synchDisk->ReadSector(dataSectors[lastIndex],(char*)dataSectors2);
+		for(;i<numSectors;i++){//printf(freeMap->Find());
+			dataSectors2[i-lastIndex] = freeMap->Find();}
+		synchDisk->WriteSector(dataSectors[lastIndex],(char*)dataSectors2);
+	}
+}
+return true;
+}
+
+
+
