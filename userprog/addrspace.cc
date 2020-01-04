@@ -86,7 +86,7 @@ AddrSpace::AddrSpace(OpenFile *executable)
     pageTable = new TranslationEntry[numPages];
     for (i = 0; i < numPages; i++) {
 	pageTable[i].virtualPage = i;	// for now, virtual page # = phys page #
-	pageTable[i].physicalPage = i;
+	pageTable[i].physicalPage = freeMap.Find();
 	pageTable[i].valid = TRUE;
 	pageTable[i].use = FALSE;
 	pageTable[i].dirty = FALSE;
@@ -189,7 +189,7 @@ void AddrSpace::Print()
 	printf("\tVirtPage, \tPhysPage\n");
 	for (int i = 0; i < numPages; i++)
 	{
-		printf("\t%d, \t\t%d\n", pageTable[i].virtualPage, pageTable[i].physicalPage);
+            printf("\t%d, \t\t%d\n", pageTable[i].virtualPage, pageTable[i].physicalPage);
 	}
 	printf("============================================\n\n");
 }

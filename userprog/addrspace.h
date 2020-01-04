@@ -15,6 +15,9 @@
 
 #include "copyright.h"
 #include "filesys.h"
+#include "bitmap.h"
+
+static BitMap freeMap(128);
 
 #define UserStackSize		1024 	// increase this as necessary!
 
